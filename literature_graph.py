@@ -5,10 +5,8 @@ A standalone research tool for generating interactive dual citation graphs
 (Bleeding Edge contemporaries & Foundational Roots ancestors) using the Semantic Scholar API.
 
 Security & Environment Note:
-- Never hardcode API keys in this script.
 - Store your key in a `.env` file as:
     S2_API_KEY=your_actual_key_here
-- Ensure `.env` is listed in your `.gitignore` before committing to Git!
 """
 
 import hashlib
@@ -80,7 +78,7 @@ class S2Client:
         if elapsed < self.min_delay:
             time.sleep(self.min_delay - elapsed)
 
-    def request(self, method: str, url: str, max_retries: int = 4, **kwargs):
+    def request(self, method: str, url: str, max_retries: int = 7, **kwargs):
         params = kwargs.get("params")
         json_data = kwargs.get("json")
         cache_file = self._get_cache_path(method, url, params, json_data)
@@ -94,9 +92,9 @@ class S2Client:
                 pass
 
         full_url = f"{BASE_URL}{url}" if url.startswith("/") else url
-        backoff = 3.0
+        backoff = 1.5
 
-        for attempt in range(max_retries + 1):
+        for attempt in range(max_retries):
             self._throttle()
             try:
                 res = self.session.request(method, full_url, timeout=25, **kwargs)
