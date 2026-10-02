@@ -4,7 +4,6 @@ Connected Papers CLI & Dual Literature Graph Engine
 A standalone research tool for generating interactive dual citation graphs
 (Bleeding Edge contemporaries & Foundational Roots ancestors) using the Semantic Scholar API.
 
-Security & Environment Note:
 - Store your key in a `.env` file as:
     S2_API_KEY=your_actual_key_here
 """
@@ -24,19 +23,47 @@ import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Attempt to load .env if python-dotenv is installed
-try:
-    from dotenv import load_dotenv
-    # Load .env file from script directory or workspace root
-    load_dotenv(Path(__file__).resolve().parent / ".env")
-except ImportError:
-    pass
+# Robust .env loader: works with python-dotenv OR built-in fallback parser
+def load_env_credentials():
+    # 1. Try python-dotenv if installed
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(Path(__file__).resolve().parent / ".env")
+        load_dotenv(Path.cwd() / ".env")
+    except ImportError:
+        pass
 
-# =============================================================================
-# CONFIGURATION & CLIENT
-# =============================================================================
-# Read API key securely from environment variable
-API_KEY = os.getenv("S2_API_KEY") or os.getenv("SEMANTIC_SCHOLAR_API_KEY") or ""
+    key = os.getenv("S2_API_KEY") or os.getenv("SEMANTIC_SCHOLAR_API_KEY") or ""
+    if key:
+        return key.strip().strip("'\"")
+
+    # 2. Built-in fallback: manually check for .env or .env.txt in script directory and cwd
+    candidate_paths = [
+        Path(__file__).resolve().parent / ".env",
+        Path.cwd() / ".env",
+        Path(__file__).resolve().parent / ".env.txt",
+        Path.cwd() / ".env.txt",
+    ]
+    for p in candidate_paths:
+        if p.exists() and p.is_file():
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if not line or line.startswith("#"):
+                            continue
+                        if "=" in line:
+                            k, v = line.split("=", 1)
+                            k = k.strip()
+                            v = v.strip().strip("'\"")
+                            if k in ("S2_API_KEY", "SEMANTIC_SCHOLAR_API_KEY"):
+                                os.environ[k] = v
+                                return v
+            except Exception:
+                pass
+    return ""
+
+API_KEY = load_env_credentials()
 
 BASE_URL = "https://api.semanticscholar.org/graph/v1"
 REC_URL = "https://api.semanticscholar.org/recommendations/v1"
@@ -1489,10 +1516,12 @@ if __name__ == "__main__":
         print("\n=======================================================")
         print(" Connected Papers CLI - Conference Tier Engine")
         print("=======================================================")
-        if not API_KEY:
-            print("[!] Note: S2_API_KEY environment variable not found.")
-            print("    Running in public unauthenticated mode (rate limits apply).")
-            print("    To add a key, add S2_API_KEY=your_key in .env\n")
+        if API_KEY:
+            print(f"[+] Authenticated: S2_API_KEY loaded ({API_KEY[:4]}...{API_KEY[-4:]}). Full rate limits active.\n")
+        else:
+            print("[!] Note: S2_API_KEY not found in .env or environment.")
+            print("    Running in public unauthenticated mode (strict rate limits apply).")
+            print("    To fix: create a .env file containing: S2_API_KEY=your_key\n")
         try:
             query = input("[?] Paste paper title, DOI, or arXiv URL: ").strip()
         except (KeyboardInterrupt, EOFError):

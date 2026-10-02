@@ -5,7 +5,7 @@ coverage/
 .DS_Store
 *.log
 .env*
-.env
+!.env.example
 
 # Python & S2 Cache
 __pycache__/
