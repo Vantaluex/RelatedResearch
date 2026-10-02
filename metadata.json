@@ -1,0 +1,6 @@
+{
+  "name": "Literature Graph & S2 API Tools",
+  "description": "Interactive dual-graph citation network generator and Semantic Scholar API toolkit with secure environment configuration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
